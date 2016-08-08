@@ -11,7 +11,9 @@ from astropy import units
 from galpy.util import bovy_conversion
 
 from time import clock
-folder = "SCF_n=1_l=1_Acos=-.66"
+import os
+
+folder = "SCF_AcosFull_N30_L30"
 
 
 ##Creating the adjusted nfw density
@@ -25,11 +27,12 @@ def newNFWDensity(R, z, phi=0, a=2.):
     return (4*nu.pi*(a**3)*(xi/a)*(1. + (xi/a))**2)**-1 
 
 a_nfw = 200./8
-Acos, Asin = potential.scf_compute_coeffs_axi(newNFWcutoffDensity, 30,10, a=a_nfw, costheta_order=40)
-Acos[1,1,0] = -.66
-scf = potential.SCFPotential(Acos=Acos, Asin=Asin, a=a_nfw)
+#Acos, Asin = potential.scf_compute_coeffs_axi(newNFWcutoffDensity, 30,30, a=a_nfw, costheta_order=40)
+Acos = nu.load("Orbits/{}/Acos.npy".format(folder))
+Asin = None
+scf = potential.SCFPotential(Acos=Acos, Asin=Asin, a=a_nfw, normalize=.35)
 
-##plotAxiCoeffs(scf._Acos, .3)
+plotAxiCoeffs(nu.fabs(Acos), .3)
 ##plt.figure()
 ##R = nu.linspace(.1,10,1000)
 ##plt.loglog(R, scf.dens(R,R,0), label="SCF")
@@ -42,11 +45,13 @@ scf = potential.SCFPotential(Acos=Acos, Asin=Asin, a=a_nfw)
 ##    Acos_line = Acos[n,::2,0]
 ##    plt.plot(r, Acos_line, "--", label="{0}".format(n))
 ##plt.legend()    
-##plt.show()
+plt.show()
 
-nu.save("Orbits/{0}/Acos.npy".format(folder), Acos)
-    
-
+##dirs = os.walk("Orbits/").next()[1]
+##if folder not in dirs:
+##    os.makedirs("Orbits/{0}".format(folder))
+##nu.save("Orbits/{0}/Acos.npy".format(folder), Acos)
+##
 TIME = 3000*units.Myr
 dt = 1 * units.Myr
 div = 1.
@@ -79,12 +84,11 @@ def randomVelocity(std=.001):
     return nu.random.normal(scale=std)
 
 time1 = nu.arange(0, TIME.value, dt.value)*units.Myr
-orbits = nu.empty(len(time1), dtype=Orbit)
 orbits_pos = nu.empty((len(time1) + 1,9,len(ts)), dtype=units.quantity.Quantity)
 orbits_pos[0, :, :] = ts, newOrbit.x(ts), newOrbit.y(ts), newOrbit.z(ts), newOrbit.vx(ts), newOrbit.vy(ts), newOrbit.vz(ts), newOrbit.ra(ts), newOrbit.dec(ts)
 orbits_pos[:,:,:] = orbits_pos[0,:,:]
 i = 0
-std = 0.008
+std = 0.004
 stdR = std
 stdT = std
 stdz = std
@@ -98,7 +102,7 @@ for t in time1:
     tempOrbit.turn_physical_off()
     time = nu.arange(0,(TIME + step_size - t).value,step_size.value)*units.Myr
     tempOrbit.integrate(ts, MWPotential, method='dopr54_c')
-    orbits[i] = tempOrbit
+    
     #orbits_pos[:,i] = (orbits[i].x(time[-1]), orbits[i].y(time[-1]), orbits[i].z(time[-1]))
     orbits_pos[i, :, i*div:] = ts[ts>=t], tempOrbit.x(time), tempOrbit.y(time), tempOrbit.z(time), tempOrbit.vx(time), tempOrbit.vy(time), tempOrbit.vz(time), tempOrbit.ra(time), tempOrbit.dec(time)
     i +=1
@@ -106,6 +110,10 @@ for t in time1:
 ##Saves the orbit at every step
 nu.save("Orbits/{0}/Orbits_std{1}_dt{2}.npy".format(folder,std, dt),orbits_pos)
 ##Saves the Orbit at the very end
+dirs = os.walk("Orbits/{0}/".format(folder)).next()[1]
+if "{0}".format(TIME) not in dirs:
+    os.makedirs("Orbits/{0}/{1}/".format(folder,TIME))
+               
 nu.save("Orbits/{0}/{1}/Orbits_std{2}_dt{3}.npy".format(folder, TIME, std, dt),orbits_pos[:,:,-1])    
 ##plt.plot(newOrbit.ra(TIME), newOrbit.dec(TIME), 'o')
 ##plt.plot(orbits_pos[:,7,-1], orbits_pos[:,8,-1], '.')

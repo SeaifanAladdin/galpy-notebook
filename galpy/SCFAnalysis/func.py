@@ -27,7 +27,8 @@ def getForces(folder):
         mn= potential.MiyamotoNagaiPotential(a=3./8.,b=0.28/8.,normalize=.6)
         MWPotential= [ps,mn,scf]
         x,y,z = orbits_pos[-1,:3]
-        R, z, phi = rect_to_cyl(x,y,z)
+        R, phi, z = rect_to_cyl(x,y,z)
+        print "(R,z,phi) = ({0}, {1}, {2})".format(R,z,phi)
         Rforce = potential.evaluateRforces(MWPotential, R,z,phi)
         zforce = potential.evaluatezforces(MWPotential, R,z,phi)
         phiforce = potential.evaluatephiforces(MWPotential, R,z,phi)
